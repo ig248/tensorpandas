@@ -43,7 +43,5 @@ exclude = '(\.git|\.pytest_cache|\.mypy_cache|\.tox|\.venv|build|dist|docs)'
 [tool.dephell.main]
 # read from poetry format
 from = {format = "poetry", path = "pyproject.toml"}
-# drop dev-dependencies
-envs = ["main"]
 # and convert into setup.py
 to = {format = "setuppy", path = "setup.py"}

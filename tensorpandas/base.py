@@ -107,10 +107,20 @@ class TensorDtype(pdx.ExtensionDtype, metaclass=registry_type):
 
 
 class TensorArray(pdx.ExtensionArray):
+    ndim = 1
+
     def __init__(self, data):
         """Initialize from an nd-array or list of arrays."""
-        self.data = np.stack(data)
-
+        if isinstance(data, self.__class__):
+            self.data = data.data
+            return
+        try:
+            self.data = np.stack(data)
+        except ValueError as e:
+            if isinstance(data, np.ndarray):
+                self.data = data  # empty array
+            else:
+                raise ValueError("Incompatible data found at TensorArray initialization") from e
     # Attributes
     @property
     def dtype(self):
@@ -124,15 +134,18 @@ class TensorArray(pdx.ExtensionArray):
         return self.data.shape[0]
 
     @property
-    def shape(self):
+    def tensor_shape(self):
         return self.data.shape
 
     @property
-    def ndim(self):
+    def tensor_ndim(self):
         return self.data.ndim
 
     def __getitem__(self, idx):
-        return self.data[idx, :]
+        result = self.data[idx]
+        if result.ndim < self.tensor_ndim:
+            return result
+        return self.__class__(result)
 
     # Methods
     @classmethod
@@ -140,7 +153,16 @@ class TensorArray(pdx.ExtensionArray):
         return cls(scalars)
 
     def isna(self):
-        np.any(np.isnan(self.data), axis=tuple(range(1, self.ndim + 1)))
+        return np.any(np.isnan(self.data), axis=tuple(range(1, self.tensor_ndim)))
+
+    def copy(self):
+        return self.__class__(self.data.copy())
+
+    def __array__(self, dtype=None):
+        if dtype == np.dtype(object):
+            # Return a 1D array for pd.array() compatibility
+            return np.array([*self.data, None])[:-1]
+        return self.data
 
     # Arithmetic methods
     def __eq__(self, other):
@@ -172,3 +194,11 @@ class TensorAccessor:
     @property
     def values(self):
         return self._obj.values.data
+
+    @property
+    def ndim(self):
+        return self._obj.tensor_ndim
+
+    @property
+    def shape(self):
+        return self._obj.tensor_shape

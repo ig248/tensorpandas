@@ -1,4 +1,4 @@
-# from pandas.tests.extension import base
+from pandas.tests.extension import base
 
-# class TestConstructors(base.BaseConstructorsTests):
-#     pass
+class TestConstructors(base.BaseConstructorsTests):
+    pass
