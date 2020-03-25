@@ -1,0 +1,55 @@
+version: 2.1
+orbs:
+  codecov: codecov/codecov@1.0.4
+
+jobs:
+  lint-test:
+    docker:
+      - image: circleci/python:3.6.9
+
+    working_directory: ~/tensorpandas
+
+    steps:
+
+      - checkout
+
+      - restore_cache:
+          keys:
+            # when lock file changes, use increasingly general patterns to restore cache
+            - pip-packages-{{ .Environment.CACHE_VERSION }}-{{ .Branch }}-{{ checksum "poetry.lock" }}
+            - pip-packages-{{ .Environment.CACHE_VERSION }}-{{ .Branch }}-
+            - pip-packages-{{ .Environment.CACHE_VERSION }}-
+
+      - run:
+          name: Install dependencies
+          command: |
+            poetry config virtualenvs.in-project true
+            make install
+      
+      - save_cache:
+          paths:
+              - ./.venv/
+          key: pip-packages-{{ .Environment.CACHE_VERSION }}-{{ .Branch }}-{{ checksum "poetry.lock" }}
+
+      - run:
+          name: Run lint
+          command: |
+            make lint
+
+      - run:
+          name: Run unit tests
+          command: |
+            make test
+
+      - store_test_results:
+          path: ./junit
+
+      # - codecov/upload:
+      #     file: ./coverage.xml
+
+
+workflows:
+  version: 2
+  lint-test-docs:
+    jobs:
+      - lint-test
