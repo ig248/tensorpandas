@@ -121,6 +121,7 @@ class TensorArray(pdx.ExtensionArray):
                 self.data = data  # empty array
             else:
                 raise ValueError("Incompatible data found at TensorArray initialization") from e
+
     # Attributes
     @property
     def dtype(self):
@@ -192,13 +193,21 @@ class TensorAccessor:
             raise AttributeError("Can only use .tensor accessor with Tensor values")
 
     @property
+    def tensorarray(self):
+        return self._obj.values
+
+    @property
     def values(self):
-        return self._obj.values.data
+        return self.tensorarray.data
+
+    @property
+    def dtype(self):
+        return self.tensorarray.dtype
 
     @property
     def ndim(self):
-        return self._obj.tensor_ndim
+        return self.tensorarray.tensor_ndim
 
     @property
     def shape(self):
-        return self._obj.tensor_shape
+        return self.tensorarray.tensor_shape

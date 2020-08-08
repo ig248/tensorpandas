@@ -50,3 +50,5 @@ def test_tensor_astype(ta, df):
 
 def test_tensor_accessor(shape, ta, df):
     assert np.array_equal(df["tensor"].tensor.values, ta.data)
+    assert df["tensor"].tensor.ndim == len(shape) + 1
+    assert df["tensor"].tensor.shape == (n, *shape)
