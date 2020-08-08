@@ -153,6 +153,10 @@ class TensorArray(pdx.ExtensionArray):
     def _from_sequence(cls, scalars, dtype=None, copy=False):
         return cls(scalars)
 
+    @classmethod
+    def _concat_same_type(cls, to_concat):
+        return cls(np.concatenate([arr.data for arr in to_concat]))
+
     def isna(self):
         return np.any(np.isnan(self.data), axis=tuple(range(1, self.tensor_ndim)))
 

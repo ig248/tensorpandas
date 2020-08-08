@@ -52,3 +52,8 @@ def test_tensor_accessor(shape, ta, df):
     assert np.array_equal(df["tensor"].tensor.values, ta.data)
     assert df["tensor"].tensor.ndim == len(shape) + 1
     assert df["tensor"].tensor.shape == (n, *shape)
+
+
+def test_df_slice_concat(df):
+    new_df = pd.concat([df.iloc[: n // 2], df.iloc[n // 2 :]])
+    pd.testing.assert_frame_equal(new_df, df)
