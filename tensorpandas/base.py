@@ -163,6 +163,9 @@ class TensorArray(pdx.ExtensionArray):
     def copy(self):
         return self.__class__(self.data.copy())
 
+    def view(self):
+        return self.__class__(self.data)
+
     def __array__(self, dtype=None):
         if dtype == np.dtype(object):
             # Return a 1D array for pd.array() compatibility
