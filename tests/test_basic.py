@@ -1,10 +1,8 @@
-import pytest
-
 import numpy as np
 import pandas as pd
+import pytest
 
 from tensorpandas import TensorArray
-
 
 n = 100
 
@@ -55,5 +53,6 @@ def test_tensor_accessor(shape, ta, df):
 
 
 def test_df_slice_concat(df):
+    """Relies on _concat_same_type"""
     new_df = pd.concat([df.iloc[: n // 2], df.iloc[n // 2 :]])
     pd.testing.assert_frame_equal(new_df, df)
