@@ -1,12 +1,16 @@
 import functools
 import json
+import numbers
 import operator
 from typing import Any, Sequence, Union
 
 import numpy as np
 import pandas.api.extensions as pdx
 import pyarrow as pa
+from numpy.lib.mixins import NDArrayOperatorsMixin
+from pandas._libs import lib
 from pandas.core.algorithms import take
+from pandas.core.arrays import PandasArray
 
 __all__ = ["TensorDtype", "TensorArray"]
 
@@ -108,7 +112,7 @@ class TensorDtype(pdx.ExtensionDtype, metaclass=registry_type):
         return TensorArray(np.stack(tensors))
 
 
-class TensorArray(pdx.ExtensionArray):
+class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
     ndim = 1
 
     def __init__(self, data):
@@ -255,9 +259,45 @@ class TensorArray(pdx.ExtensionArray):
             return np.array([*self._ndarray, None])[:-1]
         return self._ndarray
 
-    # Arithmetic methods
-    def __eq__(self, other):
-        return np.array_equal(self._ndarray, other._ndarray)
+    # adopted from PandasArray
+    _HANDLED_TYPES = (np.ndarray, numbers.Number, PandasArray)
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        out = kwargs.get("out", ())
+        for x in inputs + out:
+            if not isinstance(x, self._HANDLED_TYPES + (self.__class__,)):
+                return NotImplemented
+
+        # Ther doesn't seem to be a way of knowing if another array came from a PandasArray
+        # This creates a huge confusion between column and row arrays.
+        def _as_array(x):
+            if isinstance(x, self.__class__):
+                x = x._ndarray
+            return x
+
+        # Defer to the implementation of the ufunc on unwrapped values.
+        inputs = tuple(_as_array(x) for x in inputs)
+        if out:
+            kwargs["out"] = tuple(_as_array(x) for x in out)
+        result = getattr(ufunc, method)(*inputs, **kwargs)
+
+        if type(result) is tuple and len(result):
+            # multiple return values
+            if not lib.is_scalar(result[0]):
+                # re-box array-like results
+                return tuple(type(self)(x) for x in result)
+            else:
+                # but not scalar reductions
+                return result
+        elif method == "at":
+            # no return value
+            return None
+        else:
+            # one return value
+            if not lib.is_scalar(result):
+                # re-box array-like results, but not scalar reductions
+                result = type(self)(result)
+            return result
 
     # Arrow methods
     def __arrow_array__(self, type=None) -> pa.Array:

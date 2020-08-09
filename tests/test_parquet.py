@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 
@@ -8,4 +9,4 @@ def test_parquet_roundtrip(data, tmp_path):
     df2 = pd.read_parquet(filename)
 
     assert "tensors" in df2
-    assert all(df["tensors"] == df2["tensors"])
+    assert np.array_equal(df["tensors"], df2["tensors"])

@@ -43,7 +43,7 @@ def test_tensor_array_values(shape, ta):
 
 
 def test_tensor_astype(ta, df):
-    assert all(df["array"].astype("Tensor") == ta)
+    assert np.array_equal(df["array"].astype("Tensor"), ta)
 
 
 def test_tensor_accessor(shape, ta, df):
@@ -62,3 +62,28 @@ def test_df_iloc(df):
     df_iloc = df.iloc[:2]
     df_take = df.take([1, 0, -len(df) + 1]).take([-2, -1])
     pd.testing.assert_frame_equal(df_take, df_iloc)
+
+
+def test_ufunc(shape, df):
+    """Perform some basic arithmetic."""
+    # op with another TensorArray
+    df["tensor"] -= df["tensor"]
+    assert df["tensor"].tensor.shape == (n, *shape)
+    assert np.array_equiv(df["tensor"], 0)
+
+    # op with another scalar
+    df["tensor"] += 1
+    assert df["tensor"].tensor.shape == (n, *shape)
+    assert np.array_equiv(df["tensor"], 1)
+
+    # op with array (row-wise)
+    arr = 2 * np.ones(shape)
+    df["tensor"] *= arr
+    assert df["tensor"].tensor.shape == (n, *shape)
+    assert np.array_equiv(df["tensor"], 2)
+
+    # op with array (column-wise)
+    arr = np.arange(n).reshape(n, *(1 for _ in shape))
+    df["tensor"] *= arr
+    assert df["tensor"].tensor.shape == (n, *shape)
+    assert np.array_equiv(df["tensor"], 2 * arr)
