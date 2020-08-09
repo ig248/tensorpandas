@@ -13,7 +13,7 @@ install:
 	poetry install
 
 format:
-	poetry run isort -rc .
+	poetry run isort .
 	poetry run black .
 
 lint:
