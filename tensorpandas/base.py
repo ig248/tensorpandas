@@ -114,13 +114,13 @@ class TensorArray(pdx.ExtensionArray):
     def __init__(self, data):
         """Initialize from an nd-array or list of arrays."""
         if isinstance(data, self.__class__):
-            self.data = data.data
+            self._ndarray = data._ndarray
             return
         try:
-            self.data = np.stack(data)
+            self._ndarray = np.stack(data)
         except ValueError as e:
             if isinstance(data, np.ndarray):
-                self.data = data  # empty array
+                self._ndarray = data  # empty array
             else:
                 raise ValueError("Incompatible data found at TensorArray initialization") from e
 
@@ -134,18 +134,18 @@ class TensorArray(pdx.ExtensionArray):
         return len(self)
 
     def __len__(self):
-        return self.data.shape[0]
+        return self._ndarray.shape[0]
 
     @property
     def tensor_shape(self):
-        return self.data.shape
+        return self._ndarray.shape
 
     @property
     def tensor_ndim(self):
-        return self.data.ndim
+        return self._ndarray.ndim
 
     def __getitem__(self, idx):
-        result = self.data[idx]
+        result = self._ndarray[idx]
         if result.ndim < self.tensor_ndim:
             return result
         return self.__class__(result)
@@ -172,7 +172,7 @@ class TensorArray(pdx.ExtensionArray):
         -------
         None
         """
-        self.data[key] = value
+        self._ndarray[key] = value
 
     # Methods
     @classmethod
@@ -181,10 +181,10 @@ class TensorArray(pdx.ExtensionArray):
 
     @classmethod
     def _concat_same_type(cls, to_concat):
-        return cls(np.concatenate([arr.data for arr in to_concat]))
+        return cls(np.concatenate([arr._ndarray for arr in to_concat]))
 
     def isna(self):
-        return np.any(np.isnan(self.data), axis=tuple(range(1, self.tensor_ndim)))
+        return np.any(np.isnan(self._ndarray), axis=tuple(range(1, self.tensor_ndim)))
 
     def take(
         self, indices: Sequence[int], allow_fill: bool = False, fill_value: Any = None
@@ -235,30 +235,30 @@ class TensorArray(pdx.ExtensionArray):
         numpy.take
         api.extensions.take
         """
-        _result = take(self.data, indices, fill_value=fill_value, allow_fill=allow_fill)
+        _result = take(self._ndarray, indices, fill_value=fill_value, allow_fill=allow_fill)
         return self.__class__(_result)
 
     def copy(self):
-        return self.__class__(self.data.copy())
+        return self.__class__(self._ndarray.copy())
 
     def view(self):
-        return self.__class__(self.data)
+        return self.__class__(self._ndarray)
 
     def __array__(self, dtype=None):
         if dtype == np.dtype(object):
             # Return a 1D array for pd.array() compatibility
-            return np.array([*self.data, None])[:-1]
-        return self.data
+            return np.array([*self._ndarray, None])[:-1]
+        return self._ndarray
 
     # Arithmetic methods
     def __eq__(self, other):
-        return np.array_equal(self.data, other.data)
+        return np.array_equal(self._ndarray, other._ndarray)
 
     # Arrow methods
     def __arrow_array__(self, type=None) -> pa.Array:
         # convert the underlying array values to a pyarrow Array
-        subtype = pa.from_numpy_dtype(self.data.dtype)
-        arrow_type = ArrowTensorType(shape=self.data.shape[1:], subtype=subtype)
+        subtype = pa.from_numpy_dtype(self._ndarray.dtype)
+        arrow_type = ArrowTensorType(shape=self._ndarray.shape[1:], subtype=subtype)
         storage_array = pa.array(
             [item.tobytes() for item in self], type=arrow_type._storage_type, from_pandas=True
         )
@@ -283,7 +283,7 @@ class TensorAccessor:
 
     @property
     def values(self):
-        return self.tensorarray.data
+        return self.tensorarray._ndarray
 
     @property
     def dtype(self):
