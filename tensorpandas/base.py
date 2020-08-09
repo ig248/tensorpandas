@@ -115,14 +115,19 @@ class TensorArray(pdx.ExtensionArray):
         """Initialize from an nd-array or list of arrays."""
         if isinstance(data, self.__class__):
             self._ndarray = data._ndarray
-            return
-        try:
-            self._ndarray = np.stack(data)
-        except ValueError as e:
-            if isinstance(data, np.ndarray):
-                self._ndarray = data  # empty array
-            else:
-                raise ValueError("Incompatible data found at TensorArray initialization") from e
+        else:
+            try:
+                self._ndarray = np.stack(data)
+            except ValueError as e:
+                if isinstance(data, np.ndarray):
+                    self._ndarray = data  # empty array
+                else:
+                    raise ValueError(
+                        "Incompatible data found at TensorArray initialization"
+                    ) from e
+        if self.tensor_ndim < 2:
+            # For now, this is important to avoid ambiguity between 1D and 2D column vectors.
+            raise ValueError("Tensor data be at least 2D, including column dimension.")
 
     # Attributes
     @property

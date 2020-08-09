@@ -4,10 +4,10 @@ import pytest
 
 from tensorpandas import TensorArray
 
-n = 100
+n = 4
 
 
-@pytest.fixture(params=[0, 1, 2])
+@pytest.fixture(params=[1, 2])
 def shape(request):
     return (2, 3)[: request.param]
 
