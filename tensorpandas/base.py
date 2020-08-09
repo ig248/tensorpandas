@@ -1,10 +1,12 @@
 import functools
 import json
 import operator
+from typing import Any, Sequence, Union
 
 import numpy as np
 import pandas.api.extensions as pdx
 import pyarrow as pa
+from pandas.core.algorithms import take
 
 __all__ = ["TensorDtype", "TensorArray"]
 
@@ -159,6 +161,58 @@ class TensorArray(pdx.ExtensionArray):
 
     def isna(self):
         return np.any(np.isnan(self.data), axis=tuple(range(1, self.tensor_ndim)))
+
+    def take(
+        self, indices: Sequence[int], allow_fill: bool = False, fill_value: Any = None
+    ) -> "TensorArray":
+        """
+        Take elements from an array.
+
+        Parameters
+        ----------
+        indices : sequence of int
+            Indices to be taken.
+        allow_fill : bool, default False
+            How to handle negative values in `indices`.
+
+            * False: negative values in `indices` indicate positional indices
+              from the right (the default). This is similar to
+              :func:`numpy.take`.
+
+            * True: negative values in `indices` indicate
+              missing values. These values are set to `fill_value`. Any other
+              other negative values raise a ``ValueError``.
+
+        fill_value : any, optional
+            Fill value to use for NA-indices when `allow_fill` is True.
+            This may be ``None``, in which case the default NA value for
+            the type, ``self.dtype.na_value``, is used.
+
+            For many ExtensionArrays, there will be two representations of
+            `fill_value`: a user-facing "boxed" scalar, and a low-level
+            physical NA value. `fill_value` should be the user-facing version,
+            and the implementation should handle translating that to the
+            physical version for processing the take if necessary.
+
+        Returns
+        -------
+        ExtensionArray
+
+        Raises
+        ------
+        IndexError
+            When the indices are out of bounds for the array.
+        ValueError
+            When `indices` contains negative values other than ``-1``
+            and `allow_fill` is True.
+
+        See Also
+        --------
+        numpy.take
+        api.extensions.take
+        """
+        _result = take(self.data, indices, fill_value=fill_value, allow_fill=allow_fill)
+        return self.__class__(_result)
 
     def copy(self):
         return self.__class__(self.data.copy())
