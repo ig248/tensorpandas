@@ -1,6 +1,6 @@
 # tensorpandas
 
-Provides extension types to store arbitrary ndarrays (tensors) in pandas objects:
+Provides extension types to store arbitrary ndarrays (tensors) in a pandas column:
 
 ```python
 n = 100
@@ -25,4 +25,4 @@ df.to_parquet("test.parquet". engine="pyarrow")  # store each tensor as fixed-si
 ## Features
 - store n-dimensional arrays in a pandas Series or DataFrame
 - support for `pyarrow`: `df.to_parquet`/`pd.read_parquet` support the Tensor extension type
-- data is accessable as an (n+1)-dimensional array for efficient slicing or in-place manipulation
+- data is accessible as an (n+1)-dimensional array for efficient slicing or in-place manipulation
