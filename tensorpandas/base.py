@@ -142,6 +142,13 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
     def size(self):
         return len(self)
 
+    @property
+    def nbytes(self) -> int:
+        """
+        The number of bytes needed to store this object in memory.
+        """
+        return self._ndarray.nbytes
+
     def __len__(self):
         return self._ndarray.shape[0]
 
