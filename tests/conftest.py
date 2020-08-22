@@ -10,17 +10,21 @@ from tensorpandas import TensorArray, TensorDtype
 @pytest.fixture
 def dtype():
     """A fixture providing the ExtensionDtype to validate."""
-    raise TensorDtype
+    return TensorDtype()
 
 
 @pytest.fixture
-def data():
+def shape():
+    return (2, 3)
+
+
+@pytest.fixture
+def data(shape):
     """
     Length-100 array for this type.
     * data[0] and data[1] should both be non missing
     * data[0] and data[1] should not be equal
     """
-    shape = (2, 3)
     values = np.random.rand(100, *shape)
     return TensorArray(values)
 
@@ -32,9 +36,10 @@ def data_for_twos():
 
 
 @pytest.fixture
-def data_missing():
+def data_missing(shape, na_value):
     """Length-2 array with [NA, Valid]"""
-    raise NotImplementedError
+    values = np.array([na_value, np.ones(shape)])
+    return TensorArray(values)
 
 
 @pytest.fixture(params=["data", "data_missing"])
@@ -95,13 +100,19 @@ def na_cmp():
     True if both arguments are (scalar) NA for your type.
     By default, uses ``operator.is_``
     """
-    return operator.is_
+    def na_cmp_(x, y):
+        try:
+            np.testing.assert_array_equal(x, y)
+            return True
+        except AssertionError:
+            return False
+    return na_cmp_
 
 
 @pytest.fixture
-def na_value():
+def na_value(shape):
     """The scalar missing value for this type. Default 'None'"""
-    return None
+    return np.nan * np.zeros(shape)
 
 
 @pytest.fixture
