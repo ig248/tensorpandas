@@ -9,8 +9,9 @@ import pandas.api.extensions as pdx
 import pyarrow as pa
 from numpy.lib.mixins import NDArrayOperatorsMixin
 from pandas._libs import lib
-from pandas.core.algorithms import take
 from pandas.core.arrays import PandasArray
+from pandas.core.indexers import check_array_indexer
+from pandas.core.dtypes.common import pandas_dtype
 
 __all__ = ["TensorDtype", "TensorArray"]
 
@@ -89,7 +90,7 @@ class TensorDtype(pdx.ExtensionDtype, metaclass=registry_type):
         if string == cls.name:
             return cls()
         else:
-            raise TypeError("Cannot construct a '{}' from " "'{}'".format(cls, string))
+            raise TypeError(f"Cannot construct a '{cls.__name__}' from '{string}'")
 
     @classmethod
     def construct_array_type(cls):
@@ -119,16 +120,10 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
         """Initialize from an nd-array or list of arrays."""
         if isinstance(data, self.__class__):
             self._ndarray = data._ndarray
+        elif isinstance(data, np.ndarray) and data.dtype != object:  # i.e. not array of arrays
+            self._ndarray = data
         else:
-            try:
-                self._ndarray = np.stack(data)
-            except ValueError as e:
-                if isinstance(data, np.ndarray):
-                    self._ndarray = data  # empty array
-                else:
-                    raise ValueError(
-                        "Incompatible data found at TensorArray initialization"
-                    ) from e
+            self._ndarray = np.stack(data)
         if self.tensor_ndim < 2:
             # For now, this is important to avoid ambiguity between 1D and 2D column vectors.
             raise ValueError("Tensor data be at least 2D, including column dimension.")
@@ -160,8 +155,11 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
     def tensor_ndim(self):
         return self._ndarray.ndim
 
-    def __getitem__(self, idx):
-        result = self._ndarray[idx]
+    def __getitem__(self, item):
+        if isinstance(item, type(self)):
+            item = item._ndarray
+        item = check_array_indexer(self, item)
+        result = self._ndarray[item]
         if result.ndim < self.tensor_ndim:
             return result
         return self.__class__(result)
@@ -198,6 +196,30 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
     @classmethod
     def _concat_same_type(cls, to_concat):
         return cls(np.concatenate([arr._ndarray for arr in to_concat]))
+
+    def astype(self, dtype, copy=True):
+        """
+        Cast to an array with 'dtype'. Currently only support conversion
+        to same Tensor type.
+
+        Parameters
+        ----------
+        dtype : str or dtype
+            Typecode or data-type to which the array is cast.
+        copy : bool, default True
+            Whether to copy the data, even if not necessary. If False,
+            a copy is made only if the old dtype does not match the
+            new dtype.
+
+        Returns
+        -------
+        array : TensorArray
+        """
+
+        dtype = pandas_dtype(dtype)
+        if isinstance(dtype, TensorDtype):
+            return self.copy() if copy else self
+        return np.array(self, dtype=dtype, copy=copy)
 
     def isna(self):
         return np.any(np.isnan(self._ndarray), axis=tuple(range(1, self.tensor_ndim)))
@@ -251,7 +273,21 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
         numpy.take
         api.extensions.take
         """
-        _result = take(self._ndarray, indices, fill_value=fill_value, allow_fill=allow_fill)
+        if fill_value is None:
+            fill_value = self.dtype.na_value
+        _result = fill_value + np.zeros((len(indices), *self.tensor_shape[1:]))
+        if allow_fill:
+            indices = np.array(indices)
+            if np.any((indices < 0) & (indices != -1)):
+                raise ValueError("Fill points must be indicated by -1")
+            destination = (indices >= 0)  # boolean
+            indices = indices[indices >= 0]
+        else:
+            destination = slice(None, None, None)
+        if len(indices) > 0 and not self._ndarray.shape[0]:
+            raise IndexError("cannot do a non-empty take")
+        _result[destination] = self._ndarray[indices]
+
         return self.__class__(_result)
 
     def copy(self):
@@ -336,6 +372,10 @@ class TensorAccessor:
     @property
     def values(self):
         return self.tensorarray._ndarray
+
+    @values.setter
+    def values(self, new_values):
+        self.tensorarray._ndarray = new_values
 
     @property
     def dtype(self):
