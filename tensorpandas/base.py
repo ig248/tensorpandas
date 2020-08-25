@@ -373,6 +373,10 @@ class TensorAccessor:
     def values(self):
         return self.tensorarray._ndarray
 
+    @values.setter
+    def values(self, new_values):
+        self.tensorarray._ndarray = new_values
+
     @property
     def dtype(self):
         return self.tensorarray.dtype
