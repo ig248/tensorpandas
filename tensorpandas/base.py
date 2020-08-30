@@ -124,9 +124,6 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
             self._ndarray = data
         else:
             self._ndarray = np.stack(data)
-        if self.tensor_ndim < 2:
-            # For now, this is important to avoid ambiguity between 1D and 2D column vectors.
-            raise ValueError("Tensor data be at least 2D, including column dimension.")
 
     # Attributes
     @property

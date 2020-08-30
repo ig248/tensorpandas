@@ -1,5 +1,6 @@
 from pandas.io.formats import format
 from pandas.io.formats.format import *
+from pandas.io.formats.format import _get_format_datetime64_from_values
 
 
 class Datetime64Formatter(GenericArrayFormatter):
