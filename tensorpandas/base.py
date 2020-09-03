@@ -1,8 +1,9 @@
+import ast
 import functools
 import json
 import numbers
 import operator
-from typing import Any, Sequence, Union
+from typing import Any, Dict, Sequence, Union
 
 import numpy as np
 import pandas.api.extensions as pdx
@@ -11,7 +12,9 @@ from numpy.lib.mixins import NDArrayOperatorsMixin
 from pandas._libs import lib
 from pandas.core.arrays import PandasArray
 from pandas.core.indexers import check_array_indexer
+from pandas.core.dtypes.dtypes import PandasExtensionDtype
 from pandas.core.dtypes.common import pandas_dtype
+
 
 __all__ = ["TensorDtype", "TensorArray"]
 
@@ -79,18 +82,48 @@ class registry_type(type):
 
 # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.api.extensions.ExtensionDtype.html
 @pdx.register_extension_dtype
-class TensorDtype(pdx.ExtensionDtype, metaclass=registry_type):
-    name = "Tensor"
-    kind = "O"
+class TensorDtype(PandasExtensionDtype, metaclass=registry_type):
+    # kind = "O"
     type = np.ndarray
-    na_value = np.nan
+    _metadata = ("shape", )
+    _cache: Dict[tuple, "TensorDtype"] = {}
+
+    def __new__(cls, shape=()):
+        if not isinstance(shape, tuple):
+            raise TypeError
+        if shape not in cls._cache:
+            cls._cache[shape] = super().__new__(cls)
+        return cls._cache[shape]
+
+    def __init__(self, shape=()):
+        self.shape = shape
 
     @classmethod
     def construct_from_string(cls, string):
-        if string == cls.name:
-            return cls()
-        else:
-            raise TypeError(f"Cannot construct a '{cls.__name__}' from '{string}'")
+        PREFIX = "Tensor[("
+        SUFFIX = ")]"
+        if string.startswith(PREFIX) and string.endswith(SUFFIX):
+            shape_str = string[len(PREFIX) - 1:-len(SUFFIX) + 1]
+            shape = ast.literal_eval(shape_str)
+            return cls(shape=shape)
+        elif string == "Tensor":
+            return cls(shape=())
+        raise TypeError(f"Cannot construct a '{cls.__name__}' from '{string}'")
+
+    @property
+    def na_value(self):
+        return np.nan + np.empty(self.shape)
+
+    def __str__(self) -> str:
+        return self.name
+
+    @property
+    def name(self) -> str:
+        return f"Tensor[{self.shape}]"
+
+    def __hash__(self) -> int:
+        # make myself hashable
+        return hash(str(self))
 
     @classmethod
     def construct_array_type(cls):
@@ -128,7 +161,7 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
     # Attributes
     @property
     def dtype(self):
-        return TensorDtype()
+        return TensorDtype(shape=self.tensor_shape[1:])
 
     @property
     def size(self):
