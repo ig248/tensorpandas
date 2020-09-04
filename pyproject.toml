@@ -12,7 +12,7 @@ homepage = "https://github.com/octoenergy/tensorpandas"
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.6"
 pandas = "^1.0.3"
 pyarrow = "^0.16.0"
 

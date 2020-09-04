@@ -23,7 +23,7 @@ setup(
     name='tensorpandas',
     version='0.0.0.dev0',
     description='Tensor Extension Types for pandas and pyarrow.',
-    python_requires='==3.*,>=3.7.0',
+    python_requires='==3.*,>=3.6',
     project_urls={"homepage": "https://github.com/octoenergy/tensorpandas"},
     author='Igor Gotlibovych',
     author_email='igor@octopus.energy',
