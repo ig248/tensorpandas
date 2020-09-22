@@ -71,6 +71,14 @@ def test_df_iloc(df):
     pd.testing.assert_frame_equal(df_take, df_iloc)
 
 
+@pytest.mark.parametrize("threshold", [0, 1, n])
+def test_where(df, threshold):
+    df, cond_df = df[["tensor"]], df[["x"]].rename(columns={"x": "tensor"})
+    where_df = df[cond_df < threshold]
+    assert where_df.shape == df.shape
+    assert len(where_df.dropna(how="all", axis=0)) == threshold
+
+
 def test_ufunc(shape, df):
     """Perform some basic arithmetic."""
     # op with another TensorArray

@@ -80,6 +80,11 @@ class registry_type(type):
             return self.__name__
 
 
+class NaArray(np.ndarray):
+    """Helper type used to represent TensorDtype NA value"""
+    ...
+
+
 # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.api.extensions.ExtensionDtype.html
 @pdx.register_extension_dtype
 class TensorDtype(PandasExtensionDtype, metaclass=registry_type):
@@ -112,7 +117,8 @@ class TensorDtype(PandasExtensionDtype, metaclass=registry_type):
 
     @property
     def na_value(self):
-        return np.nan + np.empty(self.shape)
+        na = np.nan + np.empty(self.shape)
+        return na.view(NaArray)
 
     def __str__(self) -> str:
         return self.name

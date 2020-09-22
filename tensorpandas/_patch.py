@@ -1,8 +1,26 @@
+import pandas._libs.lib
 from pandas.io.formats import format
 from pandas.io.formats.format import *
 from pandas.io.formats.format import _get_format_datetime64_from_values
 
+from .base import NaArray
 
+
+# This fixes casting issues BlockManager.where()
+_original_is_scalar = pandas._libs.lib.is_scalar
+
+
+def is_scalar(val: object) -> bool:
+    if isinstance(val, NaArray):
+        return True
+    return _original_is_scalar(val)
+
+
+pandas._libs.lib.is_scalar = is_scalar
+
+
+
+# This fixes issues with repr for tensor arrays of datetimes
 class Datetime64Formatter(GenericArrayFormatter):
     def __init__(
         self,
