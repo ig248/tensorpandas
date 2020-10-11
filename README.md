@@ -2,6 +2,8 @@
 
 Provides extension types to store arbitrary ndarrays (tensors) in a pandas column:
 
+See also [Examples.ipynb]
+
 ```python
 n = 100
 shape = (2, 3)
