@@ -1,23 +1,78 @@
-import pandas._libs.lib
+## NB: this works with 1.0.5 but is a terrible hack...
+# patch block
+import numpy as np
+
+from pandas._libs import lib
+from pandas.core.dtypes.generic import ABCDataFrame
+from pandas.core.construction import extract_array
+from pandas.core.dtypes.missing import isna
+from pandas.core.dtypes.common import is_sparse
+
+import pandas.core.internals
+# patch format
 from pandas.io.formats import format
 from pandas.io.formats.format import *
 from pandas.io.formats.format import _get_format_datetime64_from_values
 
-from .base import NaArray
-
 
 # This fixes casting issues BlockManager.where()
-_original_is_scalar = pandas._libs.lib.is_scalar
+def where(
+    self,
+    other,
+    cond,
+    align=True,
+    errors="raise",
+    try_cast: bool = False,
+    axis: int = 0,
+):
+    if isinstance(other, ABCDataFrame):
+        # ExtensionArrays are 1-D, so if we get here then
+        # `other` should be a DataFrame with a single column.
+        assert other.shape[1] == 1
+        other = other.iloc[:, 0]
+
+    other = extract_array(other, extract_numpy=True)
+
+    if isinstance(cond, ABCDataFrame):
+        assert cond.shape[1] == 1
+        cond = cond.iloc[:, 0]
+
+    cond = extract_array(cond, extract_numpy=True)
+
+    if lib.is_scalar(other) and isna(other):
+        # The default `other` for Series / Frame is np.nan
+        # we want to replace that with the correct NA value
+        # for the type
+        other = self.dtype.na_value
+
+    if is_sparse(self.values):
+        # TODO(SparseArray.__setitem__): remove this if condition
+        # We need to re-infer the type of the data after doing the
+        # where, for cases where the subtypes don't match
+        dtype = None
+    else:
+        dtype = self.dtype
+
+    result = self.values.copy()
+    icond = ~cond
+    if lib.is_scalar(other) or self.dtype.is_dtype("Tensor"):
+        set_other = other
+    else:
+        set_other = other[icond]
+    try:
+        result[icond] = set_other
+    except (NotImplementedError, TypeError):
+        # NotImplementedError for class not implementing `__setitem__`
+        # TypeError for SparseArray, which implements just to raise
+        # a TypeError
+        result = self._holder._from_sequence(
+            np.where(cond, self.values, other), dtype=dtype
+        )
+
+    return [self.make_block_same_class(result, placement=self.mgr_locs)]
 
 
-def is_scalar(val: object) -> bool:
-    if isinstance(val, NaArray):
-        return True
-    return _original_is_scalar(val)
-
-
-pandas._libs.lib.is_scalar = is_scalar
-
+pandas.core.internals.blocks.ExtensionBlock.where = where
 
 
 # This fixes issues with repr for tensor arrays of datetimes

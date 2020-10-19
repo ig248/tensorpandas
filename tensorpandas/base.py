@@ -118,7 +118,7 @@ class TensorDtype(PandasExtensionDtype, metaclass=registry_type):
     @property
     def na_value(self):
         na = np.nan + np.empty(self.shape)
-        return na.view(NaArray)
+        return na
 
     def __str__(self) -> str:
         return self.name
