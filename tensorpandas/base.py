@@ -1,4 +1,3 @@
-import ast
 import functools
 import json
 import numbers
@@ -85,34 +84,37 @@ class registry_type(type):
 class TensorDtype(PandasExtensionDtype, metaclass=registry_type):
     # kind = "O"
     type = np.ndarray
-    _metadata = ("shape", )
+    _metadata = ("shape", "dtype")
     _cache: Dict[tuple, "TensorDtype"] = {}
 
-    def __new__(cls, shape=()):
+    def __new__(cls, shape=(), dtype=None):
         if not isinstance(shape, tuple):
-            raise TypeError
-        if shape not in cls._cache:
-            cls._cache[shape] = super().__new__(cls)
-        return cls._cache[shape]
+            raise TypeError("Shape must be a tuple")
+        try:
+            dtype = np.dtype(dtype)
+        except TypeError as err:
+            raise ValueError(f"{dtype} is not a valid dtype") from err
+        if (shape, dtype) not in cls._cache:
+            cls._cache[(shape, dtype)] = super().__new__(cls)
+        return cls._cache[(shape, dtype)]
 
-    def __init__(self, shape=()):
+    def __init__(self, shape=(), dtype=None):
         self.shape = shape
+        # we can not use .dtype as it is leads to conflicts in e.g. is_extension_array_dtype
+        self._dtype = np.dtype(dtype)
 
     @classmethod
     def construct_from_string(cls, string):
-        PREFIX = "Tensor[("
-        SUFFIX = ")]"
-        if string.startswith(PREFIX) and string.endswith(SUFFIX):
-            shape_str = string[len(PREFIX) - 1:-len(SUFFIX) + 1]
-            shape = ast.literal_eval(shape_str)
-            return cls(shape=shape)
-        elif string == "Tensor":
-            return cls(shape=())
-        raise TypeError(f"Cannot construct a '{cls.__name__}' from '{string}'")
+        if string == "Tensor":
+            return cls()
+        try:
+            return eval(string, {}, {"Tensor": cls, "dtype": np.dtype})
+        except Exception as err:
+            raise TypeError(f"Cannot construct a '{cls.__name__}' from '{string}'") from err
 
     @property
     def na_value(self):
-        na = np.nan + np.empty(self.shape)
+        na = np.nan + np.empty(self.shape, dtype=self._dtype)
         return na
 
     def __str__(self) -> str:
@@ -120,7 +122,7 @@ class TensorDtype(PandasExtensionDtype, metaclass=registry_type):
 
     @property
     def name(self) -> str:
-        return f"Tensor[{self.shape}]"
+        return f"Tensor(shape={self.shape!r}, dtype={self._dtype!r})"
 
     def __hash__(self) -> int:
         # make myself hashable
@@ -162,7 +164,7 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
     # Attributes
     @property
     def dtype(self):
-        return TensorDtype(shape=self.tensor_shape[1:])
+        return TensorDtype(shape=self.tensor_shape, dtype=self.tensor_dtype)
 
     @property
     def size(self):
@@ -180,18 +182,22 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
 
     @property
     def tensor_shape(self):
-        return self._ndarray.shape
+        return self._ndarray.shape[1:]
 
     @property
     def tensor_ndim(self):
-        return self._ndarray.ndim
+        return self._ndarray.ndim - 1
+
+    @property
+    def tensor_dtype(self):
+        return self._ndarray.dtype
 
     def __getitem__(self, item):
         if isinstance(item, type(self)):
             item = item._ndarray
         item = check_array_indexer(self, item)
         result = self._ndarray[item]
-        if result.ndim < self.tensor_ndim:
+        if result.ndim < self._ndarray.ndim:
             return result
         return self.__class__(result)
 
@@ -253,7 +259,7 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
         return np.array(self, dtype=dtype, copy=copy)
 
     def isna(self):
-        return np.any(np.isnan(self._ndarray), axis=tuple(range(1, self.tensor_ndim)))
+        return np.any(np.isnan(self._ndarray), axis=tuple(range(1, self._ndarray.ndim)))
 
     def take(
         self, indices: Sequence[int], allow_fill: bool = False, fill_value: Any = None
@@ -306,7 +312,7 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
         """
         if fill_value is None:
             fill_value = self.dtype.na_value
-        _result = fill_value + np.zeros((len(indices), *self.tensor_shape[1:]))
+        _result = fill_value + np.zeros((len(indices), *self.tensor_shape))
         if allow_fill:
             indices = np.array(indices)
             if np.any((indices < 0) & (indices != -1)):
@@ -392,7 +398,6 @@ class TensorAccessor:
 
     @staticmethod
     def _validate(obj):
-        # verify there is a column latitude and a column longitude
         if not isinstance(obj.dtype, TensorDtype):
             raise AttributeError("Can only use .tensor accessor with Tensor values")
 
@@ -410,7 +415,7 @@ class TensorAccessor:
 
     @property
     def dtype(self):
-        return self.tensorarray.dtype
+        return self.tensorarray.tensor_dtype
 
     @property
     def ndim(self):

@@ -48,15 +48,15 @@ def test_tensor_astype(ta, df):
 
 def test_tensor_accessor(shape, ta, df):
     assert np.array_equal(df["tensor"].tensor.values, ta._ndarray)
-    assert df["tensor"].tensor.ndim == len(shape) + 1
-    assert df["tensor"].tensor.shape == (n, *shape)
+    assert df["tensor"].tensor.ndim == len(shape)
+    assert df["tensor"].tensor.shape == shape
 
 
 def test_tensor_accessor_setter(shape, ta, df):
     df["tensor"].tensor.values *= 0
     assert np.array_equiv(df["tensor"].tensor.values, 0)
-    assert df["tensor"].tensor.ndim == len(shape) + 1
-    assert df["tensor"].tensor.shape == (n, *shape)
+    assert df["tensor"].tensor.ndim == len(shape)
+    assert df["tensor"].tensor.shape == shape
 
 
 def test_df_slice_concat(df):
@@ -83,22 +83,22 @@ def test_ufunc(shape, df):
     """Perform some basic arithmetic."""
     # op with another TensorArray
     df["tensor"] -= df["tensor"]
-    assert df["tensor"].tensor.shape == (n, *shape)
+    assert df["tensor"].tensor.shape == shape
     assert np.array_equiv(df["tensor"], 0)
 
     # op with another scalar
     df["tensor"] += 1
-    assert df["tensor"].tensor.shape == (n, *shape)
+    assert df["tensor"].tensor.shape == shape
     assert np.array_equiv(df["tensor"], 1)
 
     # op with array (row-wise)
     arr = 2 * np.ones(shape)
     df["tensor"] *= arr
-    assert df["tensor"].tensor.shape == (n, *shape)
+    assert df["tensor"].tensor.shape == shape
     assert np.array_equiv(df["tensor"], 2)
 
     # op with array (column-wise)
     arr = np.arange(n).reshape(n, *(1 for _ in shape))
     df["tensor"] *= arr
-    assert df["tensor"].tensor.shape == (n, *shape)
+    assert df["tensor"].tensor.shape == shape
     assert np.array_equiv(df["tensor"], 2 * arr)
