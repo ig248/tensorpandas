@@ -79,9 +79,9 @@ def test_df_iloc(df):
 def test_stack_unstack(init_data_type, df, dtype):
     if init_data_type != "single_array":
         pytest.skip()
-    df = df[["tensor"]]
+    df = df[["tensor"]].copy()
     df["tensor2"] = df["tensor"]
-    df["tensor2"].iloc[-1] = np.nan
+    df.loc[df.index[-1], "tensor2"] = np.nan
     tall = df.stack()
     assert len(tall) == len(df) * 2 - 1
     assert tall.tensor.dtype == dtype
