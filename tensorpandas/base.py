@@ -108,7 +108,13 @@ class TensorDtype(PandasExtensionDtype, metaclass=registry_type):
         if string == "Tensor":
             return cls()
         try:
-            return eval(string, {}, {"Tensor": cls, "dtype": np.dtype})
+            tdtype = eval(string, {}, {"Tensor": cls, "dtype": np.dtype})
+            if not isinstance(tdtype, cls):
+                raise TypeError(
+                    f"Type expression evaluated to {tdtype} of type {type(tdtype)}"
+                    " - expected a TensorDType instance."
+                )
+            return tdtype
         except Exception as err:
             raise TypeError(f"Cannot construct a '{cls.__name__}' from '{string}'") from err
 

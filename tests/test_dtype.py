@@ -1,5 +1,7 @@
 import pytest
 
+from pandas.core.dtypes.common import is_extension_array_dtype
+
 from tensorpandas import TensorDtype
 
 
@@ -20,3 +22,8 @@ def test_from_string_roundtrip(shape, dtype):
 
 def test_from_string(shape, dtype):
     assert TensorDtype.construct_from_string("Tensor") is TensorDtype()
+
+
+def test_extension_type_resolution():
+    assert not is_extension_array_dtype("str")
+    assert not is_extension_array_dtype("object")
