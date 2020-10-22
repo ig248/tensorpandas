@@ -12,15 +12,20 @@ def shape(request):
     return (2, 3)[: request.param]
 
 
+@pytest.fixture(params=["float16", "float64"])
+def dtype(request):
+    return request.param
+
+
 @pytest.fixture(params=["single_array", "sequence_of_arrays"])
 def init_data_type(request):
     return request.param
 
 
 @pytest.fixture
-def init_data(init_data_type, shape):
+def init_data(init_data_type, shape, dtype):
     if init_data_type == "single_array":
-        return np.random.rand(n, *shape)
+        return np.random.rand(n, *shape).astype(dtype)
     elif init_data_type == "sequence_of_arrays":
         return [np.random.rand(*shape) for _ in range(n)]
     else:
@@ -69,6 +74,21 @@ def test_df_iloc(df):
     df_iloc = df.iloc[:2]
     df_take = df.take([1, 0, -len(df) + 1]).take([-2, -1])
     pd.testing.assert_frame_equal(df_take, df_iloc)
+
+
+def test_stack_unstack(init_data_type, df, dtype):
+    if init_data_type != "single_array":
+        pytest.skip()
+    df = df[["tensor"]]
+    df["tensor2"] = df["tensor"]
+    df["tensor2"].iloc[-1] = np.nan
+    tall = df.stack()
+    assert len(tall) == len(df) * 2 - 1
+    assert tall.tensor.dtype == dtype
+    wide = tall.unstack()
+    assert len(wide) == len(df)
+    assert wide["tensor"].tensor.dtype == dtype
+    assert wide["tensor2"].tensor.dtype == dtype
 
 
 @pytest.mark.parametrize("threshold", [0, 1, n])

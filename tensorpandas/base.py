@@ -84,7 +84,7 @@ class registry_type(type):
 class TensorDtype(PandasExtensionDtype, metaclass=registry_type):
     # kind = "O"
     type = np.ndarray
-    _metadata = ("shape", "dtype")
+    _metadata = ("shape", "_dtype")
     _cache: Dict[tuple, "TensorDtype"] = {}
 
     def __new__(cls, shape=(), dtype=None):
@@ -312,12 +312,14 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
         """
         if fill_value is None:
             fill_value = self.dtype.na_value
-        _result = fill_value + np.zeros((len(indices), *self.tensor_shape))
+        _result = fill_value + np.zeros(
+            (len(indices), *self.tensor_shape), dtype=self.dtype._dtype
+        )
         if allow_fill:
             indices = np.array(indices)
             if np.any((indices < 0) & (indices != -1)):
                 raise ValueError("Fill points must be indicated by -1")
-            destination = (indices >= 0)  # boolean
+            destination = indices >= 0  # boolean
             indices = indices[indices >= 0]
         else:
             destination = slice(None, None, None)
@@ -336,7 +338,7 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
     def __array__(self, dtype=None):
         if dtype == np.dtype(object):
             # Return a 1D array for pd.array() compatibility
-            return np.array([*self._ndarray, None])[:-1]
+            return np.array([*self._ndarray, None], dtype=object)[:-1]
         return self._ndarray
 
     # adopted from PandasArray
