@@ -79,6 +79,14 @@ class registry_type(type):
             return self.__name__
 
 
+def _infer_na_value(dtype):
+    dtype = np.dtype(dtype)
+    na_value = None
+    if np.issubdtype(dtype, np.datetime64):
+        na_value = dtype.type("NaT")
+    return na_value
+
+
 # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.api.extensions.ExtensionDtype.html
 @pdx.register_extension_dtype
 class TensorDtype(PandasExtensionDtype, metaclass=registry_type):
@@ -120,7 +128,11 @@ class TensorDtype(PandasExtensionDtype, metaclass=registry_type):
 
     @property
     def na_value(self):
-        na = np.nan + np.empty(self.shape, dtype=self._dtype)
+        na_value = _infer_na_value(self._dtype)
+        if na_value is not None:
+            na = np.full(self.shape, na_value, dtype=self._dtype)
+        else:
+            na = np.nan + np.empty(self.shape, dtype=self._dtype)
         return na
 
     def __str__(self) -> str:
@@ -318,8 +330,8 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
         """
         if fill_value is None:
             fill_value = self.dtype.na_value
-        _result = fill_value + np.zeros(
-            (len(indices), *self.tensor_shape), dtype=self.dtype._dtype
+        _result = np.full(
+            (len(indices), *self.tensor_shape), fill_value, dtype=self.dtype._dtype
         )
         if allow_fill:
             indices = np.array(indices)

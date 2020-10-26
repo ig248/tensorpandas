@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from tensorpandas import TensorArray
+from tensorpandas.base import _infer_na_value
 
 n = 4
 
@@ -12,7 +13,7 @@ def shape(request):
     return (2, 3)[: request.param]
 
 
-@pytest.fixture(params=["float16", "float64"])
+@pytest.fixture(params=["float16", "float64", "datetime64[ns]"])
 def dtype(request):
     return request.param
 
@@ -57,7 +58,9 @@ def test_tensor_accessor(shape, ta, df):
     assert df["tensor"].tensor.shape == shape
 
 
-def test_tensor_accessor_setter(shape, ta, df):
+def test_tensor_accessor_setter(shape, ta, df, dtype):
+    if np.issubdtype(dtype, np.datetime64):
+        pytest.skip()
     df["tensor"].tensor.values *= 0
     assert np.array_equiv(df["tensor"].tensor.values, 0)
     assert df["tensor"].tensor.ndim == len(shape)
@@ -81,7 +84,7 @@ def test_stack_unstack(init_data_type, df, dtype):
         pytest.skip()
     df = df[["tensor"]].copy()
     df["tensor2"] = df["tensor"]
-    df.loc[df.index[-1], "tensor2"] = np.nan
+    df.loc[df.index[-1], "tensor2"] = _infer_na_value(dtype)
     tall = df.stack()
     assert len(tall) == len(df) * 2 - 1
     assert tall.tensor.dtype == dtype
@@ -99,8 +102,10 @@ def test_where(df, threshold):
     assert len(where_df.dropna(how="all", axis=0)) == threshold
 
 
-def test_ufunc(shape, df):
+def test_ufunc(shape, dtype, df):
     """Perform some basic arithmetic."""
+    if np.issubdtype(dtype, np.datetime64):
+        pytest.skip()
     # op with another TensorArray
     df["tensor"] -= df["tensor"]
     assert df["tensor"].tensor.shape == shape
@@ -113,12 +118,12 @@ def test_ufunc(shape, df):
 
     # op with array (row-wise)
     arr = 2 * np.ones(shape)
-    df["tensor"] *= arr
+    df["tensor"] += arr
     assert df["tensor"].tensor.shape == shape
-    assert np.array_equiv(df["tensor"], 2)
+    assert np.array_equiv(df["tensor"], 3)
 
     # op with array (column-wise)
     arr = np.arange(n).reshape(n, *(1 for _ in shape))
-    df["tensor"] *= arr
+    df["tensor"] += arr
     assert df["tensor"].tensor.shape == shape
-    assert np.array_equiv(df["tensor"], 2 * arr)
+    assert np.array_equiv(df["tensor"], 3 + arr)
