@@ -4,9 +4,9 @@ import numpy as np
 
 from pandas._libs import lib
 from pandas.core.dtypes.generic import ABCDataFrame
-from pandas.core.construction import extract_array
 from pandas.core.dtypes.missing import isna
 from pandas.core.dtypes.common import is_sparse
+from pandas.core.internals.blocks import _extract_bool_array, ABCIndexClass, ABCSeries
 
 import pandas.core.internals
 # patch format
@@ -15,29 +15,23 @@ from pandas.io.formats.format import *
 from pandas.io.formats.format import _get_format_datetime64_from_values
 
 
-# This fixes casting issues BlockManager.where()
+# # This fixes casting issues BlockManager.where()
 def where(
-    self,
-    other,
-    cond,
-    align=True,
-    errors="raise",
-    try_cast: bool = False,
-    axis: int = 0,
-):
-    if isinstance(other, ABCDataFrame):
-        # ExtensionArrays are 1-D, so if we get here then
-        # `other` should be a DataFrame with a single column.
+    self, other, cond, errors="raise", try_cast: bool = False, axis: int = 0,
+) -> List["Block"]:
+
+    cond = _extract_bool_array(cond)
+    assert not isinstance(other, (ABCIndexClass, ABCSeries, ABCDataFrame))
+
+    if isinstance(other, np.ndarray) and other.ndim == 2:
+        # TODO(EA2D): unnecessary with 2D EAs
         assert other.shape[1] == 1
-        other = other.iloc[:, 0]
+        other = other[:, 0]
 
-    other = extract_array(other, extract_numpy=True)
-
-    if isinstance(cond, ABCDataFrame):
+    if isinstance(cond, np.ndarray) and cond.ndim == 2:
+        # TODO(EA2D): unnecessary with 2D EAs
         assert cond.shape[1] == 1
-        cond = cond.iloc[:, 0]
-
-    cond = extract_array(cond, extract_numpy=True)
+        cond = cond[:, 0]
 
     if lib.is_scalar(other) and isna(other):
         # The default `other` for Series / Frame is np.nan
