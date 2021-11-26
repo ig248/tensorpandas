@@ -329,18 +329,18 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
         """
         if fill_value is None:
             fill_value = self.dtype.na_value
-        _result = np.full((len(indices), *self.tensor_shape), fill_value, dtype=self.dtype._dtype)
+        _indices = np.array(indices)
+        _result = np.full((len(_indices), *self.tensor_shape), fill_value, dtype=self.dtype._dtype)
         if allow_fill:
-            indices = np.array(indices)
-            if np.any((indices < 0) & (indices != -1)):
+            if np.any((_indices < 0) & (_indices != -1)):
                 raise ValueError("Fill points must be indicated by -1")
-            destination = indices >= 0  # boolean
-            indices = indices[indices >= 0]
+            destination = _indices >= 0  # boolean
+            _indices = _indices[_indices >= 0]
         else:
             destination = slice(None, None, None)
-        if len(indices) > 0 and not self._ndarray.shape[0]:
+        if len(_indices) > 0 and not self._ndarray.shape[0]:
             raise IndexError("cannot do a non-empty take")
-        _result[destination] = self._ndarray[indices]
+        _result[destination] = self._ndarray[_indices]
 
         return self.__class__(_result)
 
