@@ -1,5 +1,4 @@
 import pytest
-
 from pandas.core.dtypes.common import is_extension_array_dtype
 
 from tensorpandas import TensorDtype

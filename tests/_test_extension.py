@@ -1,10 +1,10 @@
-import pytest
 import operator
 
 import numpy as np
 import pandas as pd
-from pandas.tests.extension import base
 import pandas._testing as tm
+import pytest
+from pandas.tests.extension import base
 
 
 class TestDtype(base.BaseDtypeTests):
@@ -77,11 +77,11 @@ class TestReshaping(base.BaseReshapingTests):
         self.assert_series_equal(result, expected)
 
     @pytest.mark.skip("Not relevant")
-    def test_merge_on_extension_array():
+    def test_merge_on_extension_array(self):
         pass
 
     @pytest.mark.skip("Not relevant")
-    def test_merge_on_extension_array_duplicates():
+    def test_merge_on_extension_array_duplicates(self):
         pass
 
 

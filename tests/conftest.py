@@ -98,12 +98,14 @@ def na_cmp():
     True if both arguments are (scalar) NA for your type.
     By default, uses ``operator.is_``
     """
+
     def na_cmp_(x, y):
         try:
             np.testing.assert_array_equal(x, y)
             return True
         except AssertionError:
             return False
+
     return na_cmp_
 
 

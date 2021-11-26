@@ -40,7 +40,13 @@ def ta(init_data):
 
 @pytest.fixture
 def df(init_data, ta):
-    df = pd.DataFrame(dict(x=np.arange(n), array=list(init_data), tensor=ta,))
+    df = pd.DataFrame(
+        dict(
+            x=np.arange(n),
+            array=list(init_data),
+            tensor=ta,
+        )
+    )
     return df
 
 

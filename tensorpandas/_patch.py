@@ -1,23 +1,34 @@
-## NB: this works with 1.0.5 but is a terrible hack...
-# patch block
-import numpy as np
+# NB: this works with 1.1.5 but is a terrible hack...
+from typing import List, Union
 
+import numpy as np
+import pandas.core.internals
+from pandas import Series
 from pandas._libs import lib
+from pandas.core.dtypes.common import is_sparse
 from pandas.core.dtypes.generic import ABCDataFrame
 from pandas.core.dtypes.missing import isna
-from pandas.core.dtypes.common import is_sparse
-from pandas.core.internals.blocks import _extract_bool_array, ABCIndexClass, ABCSeries
+from pandas.core.internals.blocks import ABCIndexClass, ABCSeries, Block, _extract_bool_array
 
-import pandas.core.internals
 # patch format
 from pandas.io.formats import format
-from pandas.io.formats.format import *
-from pandas.io.formats.format import _get_format_datetime64_from_values
+from pandas.io.formats.format import (
+    DatetimeArray,
+    DatetimeIndex,
+    GenericArrayFormatter,
+    _get_format_datetime64_from_values,
+    format_array_from_datetime,
+)
 
 
 # # This fixes casting issues BlockManager.where()
 def where(
-    self, other, cond, errors="raise", try_cast: bool = False, axis: int = 0,
+    self,
+    other,
+    cond,
+    errors="raise",
+    try_cast: bool = False,
+    axis: int = 0,
 ) -> List["Block"]:
 
     cond = _extract_bool_array(cond)
@@ -59,9 +70,7 @@ def where(
         # NotImplementedError for class not implementing `__setitem__`
         # TypeError for SparseArray, which implements just to raise
         # a TypeError
-        result = self._holder._from_sequence(
-            np.where(cond, self.values, other), dtype=dtype
-        )
+        result = self._holder._from_sequence(np.where(cond, self.values, other), dtype=dtype)
 
     return [self.make_block_same_class(result, placement=self.mgr_locs)]
 
@@ -83,7 +92,7 @@ class Datetime64Formatter(GenericArrayFormatter):
         self.date_format = date_format
 
     def _format_strings(self) -> List[str]:
-        """ we by definition have DO NOT have a TZ """
+        """We by definition DO NOT have a TZ."""
 
         values = self.values
 
