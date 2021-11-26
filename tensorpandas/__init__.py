@@ -1,2 +1,2 @@
-from .base import *  # noqa
 from . import _patch  # noqa
+from .base import *  # noqa

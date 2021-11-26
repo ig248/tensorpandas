@@ -10,10 +10,9 @@ import pyarrow as pa
 from numpy.lib.mixins import NDArrayOperatorsMixin
 from pandas._libs import lib
 from pandas.core.arrays import PandasArray
-from pandas.core.indexers import check_array_indexer
-from pandas.core.dtypes.dtypes import PandasExtensionDtype
 from pandas.core.dtypes.common import pandas_dtype
-
+from pandas.core.dtypes.dtypes import PandasExtensionDtype
+from pandas.core.indexers import check_array_indexer
 
 __all__ = ["TensorDtype", "TensorArray"]
 
@@ -190,9 +189,7 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
 
     @property
     def nbytes(self) -> int:
-        """
-        The number of bytes needed to store this object in memory.
-        """
+        """Return number of bytes needed to store this object in memory."""
         return self._ndarray.nbytes
 
     def __len__(self):
@@ -220,8 +217,7 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
         return self.__class__(result)
 
     def __setitem__(self, key: Union[int, np.ndarray], value: Any) -> None:
-        """
-        Set one or more values inplace.
+        """Set one or more values inplace.
 
         Parameters
         ----------
@@ -240,6 +236,7 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
         Returns
         -------
         None
+
         """
         self._ndarray[key] = value
 
@@ -253,9 +250,9 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
         return cls(np.concatenate([arr._ndarray for arr in to_concat]))
 
     def astype(self, dtype, copy=True):
-        """
-        Cast to an array with 'dtype'. Currently only support conversion
-        to same Tensor type.
+        """Cast to an array with 'dtype'.
+
+        Currently only support conversionto same Tensor type.
 
         Parameters
         ----------
@@ -269,6 +266,7 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
         Returns
         -------
         array : TensorArray
+
         """
 
         dtype = pandas_dtype(dtype)
@@ -327,12 +325,11 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
         --------
         numpy.take
         api.extensions.take
+
         """
         if fill_value is None:
             fill_value = self.dtype.na_value
-        _result = np.full(
-            (len(indices), *self.tensor_shape), fill_value, dtype=self.dtype._dtype
-        )
+        _result = np.full((len(indices), *self.tensor_shape), fill_value, dtype=self.dtype._dtype)
         if allow_fill:
             indices = np.array(indices)
             if np.any((indices < 0) & (indices != -1)):
