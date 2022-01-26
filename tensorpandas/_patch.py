@@ -10,5 +10,7 @@ if ver < version.parse("1.1"):
     raise ver_exc
 elif ver < version.parse("1.2"):
     from . import _patch_1_1
+elif ver < version.parse("1.3"):
+    from . import _patch_1_2
 else:
     raise ver_exc
