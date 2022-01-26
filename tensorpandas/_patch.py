@@ -3,7 +3,7 @@ import pandas
 
 
 ver = version.parse(pandas.__version__)
-ver_exc = NotImplementedError(f"{pandas.__version__=} is not supported")
+ver_exc = NotImplementedError(f"pandas == {pandas.__version__} is not supported")
 
 
 if ver < version.parse("1.1"):
