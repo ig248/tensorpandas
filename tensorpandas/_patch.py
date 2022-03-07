@@ -12,5 +12,7 @@ elif ver < version.parse("1.2"):
     from . import _patch_1_1
 elif ver < version.parse("1.3"):
     from . import _patch_1_2
+elif ver < version.parse("1.4"):
+    from . import _patch_1_3
 else:
     raise ver_exc
