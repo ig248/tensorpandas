@@ -5,6 +5,7 @@ import numpy as np
 import pandas.core.internals
 from pandas import Series
 from pandas._libs import lib
+from pandas._libs.tslib import format_array_from_datetime
 from pandas.core.dtypes.common import is_sparse
 from pandas.core.dtypes.generic import ABCDataFrame
 from pandas.core.dtypes.missing import isna
@@ -18,7 +19,6 @@ from pandas.io.formats.format import (
     GenericArrayFormatter,
     get_format_datetime64_from_values,
 )
-from pandas._libs.tslib import format_array_from_datetime
 
 
 # # This fixes casting issues BlockManager.where()
@@ -63,10 +63,47 @@ def where(self, other, cond, errors="raise") -> list[Block]:
         # NotImplementedError for class not implementing `__setitem__`
         # TypeError for SparseArray, which implements just to raise
         # a TypeError
-        result = type(self.values)._from_sequence(
-            np.where(cond, self.values, other), dtype=dtype
-        )
+        result = type(self.values)._from_sequence(np.where(cond, self.values, other), dtype=dtype)
 
     return [self.make_block_same_class(result)]
 
+
 pandas.core.internals.blocks.ExtensionBlock.where = where
+
+
+# formatting now goes through ExtensionArrayFormatter regardless of dtype (incl. datetimes)
+def _format_strings(self) -> list[str]:
+    values = format.extract_array(self.values, extract_numpy=True)
+
+    formatter = self.formatter
+    if formatter is None:
+        # error: Item "ndarray" of "Union[Any, Union[ExtensionArray, ndarray]]" has
+        # no attribute "_formatter"
+        formatter = values._formatter(boxed=True)  # type: ignore[union-attr]
+
+    if isinstance(values, format.Categorical):
+        # Categorical is special for now, so that we can preserve tzinfo
+        array = values._internal_get_values()
+    elif values.dtype.is_dtype("Tensor"):
+        # transform to 1D object array
+        array = np.empty((len(values),), dtype=object)
+        array[:] = list(values)
+    else:
+        array = np.asarray(values)
+
+    fmt_values = format.format_array(
+        array,
+        formatter,
+        float_format=self.float_format,
+        na_rep=self.na_rep,
+        digits=self.digits,
+        space=self.space,
+        justify=self.justify,
+        decimal=self.decimal,
+        leading_space=self.leading_space,
+        quoting=self.quoting,
+    )
+    return fmt_values
+
+
+format.ExtensionArrayFormatter._format_strings = _format_strings
