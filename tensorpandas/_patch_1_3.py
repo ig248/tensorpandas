@@ -1,4 +1,6 @@
-# NB: this works with 1.2.5 but is a terrible hack...
+from __future__ import annotations
+from typing import List
+
 import numpy as np
 import pandas.core.internals
 from pandas._libs import lib
@@ -12,7 +14,7 @@ from pandas.io.formats import format
 
 
 # # This fixes casting issues BlockManager.where()
-def where(self, other, cond, errors="raise") -> list[Block]:
+def where(self, other, cond, errors="raise") -> List[Block]:
 
     cond = extract_bool_array(cond)
     assert not isinstance(other, (ABCIndex, ABCSeries, ABCDataFrame))
