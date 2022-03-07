@@ -1,11 +1,7 @@
 # NB: this works with 1.2.5 but is a terrible hack...
-from typing import List, Union
-
 import numpy as np
 import pandas.core.internals
-from pandas import Series
 from pandas._libs import lib
-from pandas._libs.tslib import format_array_from_datetime
 from pandas.core.dtypes.common import is_sparse
 from pandas.core.dtypes.generic import ABCDataFrame
 from pandas.core.dtypes.missing import isna
@@ -13,12 +9,6 @@ from pandas.core.internals.blocks import ABCIndex, ABCSeries, Block, extract_boo
 
 # patch format
 from pandas.io.formats import format
-from pandas.io.formats.format import (
-    DatetimeArray,
-    DatetimeIndex,
-    GenericArrayFormatter,
-    get_format_datetime64_from_values,
-)
 
 
 # # This fixes casting issues BlockManager.where()
