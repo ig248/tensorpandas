@@ -9,7 +9,7 @@ import pandas.api.extensions as pdx
 import pyarrow as pa
 from numpy.lib.mixins import NDArrayOperatorsMixin
 from pandas._libs import lib
-from pandas.core.arrays import PandasArray
+from pandas.core.arrays import PandasArray, DatetimeArray
 from pandas.core.dtypes.common import pandas_dtype
 from pandas.core.dtypes.dtypes import PandasExtensionDtype
 from pandas.core.indexers import check_array_indexer
@@ -173,8 +173,9 @@ class TensorArray(pdx.ExtensionArray, NDArrayOperatorsMixin):
         """Initialize from an nd-array or list of arrays."""
         if isinstance(data, self.__class__):
             self._ndarray = data._ndarray
-        elif isinstance(data, np.ndarray) and data.dtype != object:  # i.e. not array of arrays
-            self._ndarray = data
+        elif isinstance(data, (np.ndarray, DatetimeArray)) and data.dtype != object:  # i.e. not array of arrays
+            # NB: in pd1.3, DatetimeArray is returned by some operations that previously returned an ndarray
+            self._ndarray = np.array(data)
         else:
             self._ndarray = np.stack(data)
 
