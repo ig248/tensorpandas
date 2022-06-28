@@ -14,8 +14,8 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.8"
 pandas = ">=1.1.0,<1.5"
-pyarrow = "^8.0.0"
-packaging = "^21.3"
+pyarrow = ">= 6.0.0"
+packaging = ">= 21.3"
 
 [tool.poetry.dev-dependencies]
 isort = "^5.1.4"
