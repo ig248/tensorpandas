@@ -13,7 +13,7 @@ elif ver < version.parse("1.3"):
     from . import _patch_1_2  # noqa
 elif ver < version.parse("1.4"):
     from . import _patch_1_3  # noqa
-elif ver < version.parse("1.5"):
-    from . import _patch_1_4  # noqa
+elif ver < version.parse("1.6"):
+    from . import _patch_1_4_and_1_5  # noqa
 else:
     raise ver_exc
